@@ -1,0 +1,32 @@
+{
+  "name": "regl-shaders",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "budo test/index.js --ssl --cert ./rsa/certificate.crt  --key ./rsa/privateKey.key  --open --live"
+  },
+  "browserify": {
+    "transform": [
+      "glslify"
+    ]
+  },
+  "author": "Chris Bannon",
+  "license": "MIT",
+  "devDependencies": {
+    "angle-normals": "^1.0.0",
+    "budo": "^11.8.4",
+    "bunny": "^1.0.1",
+    "glslify": "^7.1.1",
+    "regl": "^2.1.0"
+  },
+  "dependencies": {
+    "@mediapipe/pose": "^0.5.1675469404",
+    "@tensorflow-models/pose-detection": "^2.1.3",
+    "@tensorflow/tfjs-backend-webgl": "^4.13.0",
+    "@tensorflow/tfjs-backend-webgpu": "^4.13.0",
+    "@tensorflow/tfjs-converter": "^4.13.0",
+    "@tensorflow/tfjs-core": "^4.13.0"
+  }
+}
