@@ -2,7 +2,7 @@
 
 ## Generate self-signed certificate
 
-To use https (for browser webcam access) with budo, you need to generate a self-signed certificate. You can do this with the following command:
+I had issues with browser webcam permissions, so you may need to generate a self-signed certificate. I created a <code>rsa/</code> folder at the root and put in my certificate and key:
 
 ```bash
 openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt

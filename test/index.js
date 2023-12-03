@@ -40,9 +40,10 @@ async function setupVideo() {
   video.autoplay = true;
   video.onloadedmetadata = () => {
     const poses = detector.estimatePoses(video);
-    console.log(poses);
+    // console.log(poses);
   };
   video.style.transform = "scaleX(-1)";
+  video.style.width = "100vw";
   video.style.display = "none";
   console.log("setup");
   document.body.appendChild(video);
@@ -50,7 +51,18 @@ async function setupVideo() {
 }
 setupVideo();
 
-const drawBG = regl({
+async function estimate() {
+  try {
+    let p = await detector.estimatePoses(video);
+    // console.log(p);
+    return p[0].keypoints;
+  } catch (e) {
+    console.log(e);
+    return [];
+  }
+}
+
+const draw = regl({
   frag: glslify("./frag.glsl"),
   vert: glslify("./vert.glsl"),
 
@@ -65,18 +77,44 @@ const drawBG = regl({
 
   uniforms: {
     u_time: (context) => context.time,
+    u_resolution: (context) => [context.viewportWidth, context.viewportHeight],
+    leftWrist: regl.prop("leftWrist"),
+    rightWrist: regl.prop("rightWrist"),
   },
 
   count: 4,
   primitive: "triangle fan",
 });
 
-regl.frame((context) => {
-  drawBG();
-
+regl.frame(async (context) => {
   if (setup) {
     // Call pose detection in each frame
-    const poses = detector.estimatePoses(video);
-    console.log(poses);
+    let keypoints = await estimate();
+    if (keypoints.length == 0) return;
+
+    let tempLeftWrist = keypoints[9];
+    let tempRightWrist = keypoints[10];
+    let lw;
+    let rw;
+    lw =
+      tempLeftWrist.score > 0.2
+        ? [tempLeftWrist.x, tempLeftWrist.y]
+        : [0.0, 0.0];
+    rw =
+      tempRightWrist.score > 0.2
+        ? [tempRightWrist.x * 5, tempRightWrist.y * 5]
+        : [0.0, 0.0];
+
+    draw({
+      leftWrist: lw,
+      rightWrist: rw,
+    });
+    console.log(lw, rw);
+  } else {
+    draw({
+      // initial draw
+      leftWrist: [100, 100],
+      rightWrist: [100, 1000],
+    });
   }
 });
