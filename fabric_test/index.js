@@ -8,6 +8,8 @@ const mat4 = require("gl-mat4");
 const camera = require("canvas-orbit-camera")(canvas);
 window.addEventListener("resize", fit(canvas), false);
 const vec3 = require("gl-vec3");
+const bunny = require("bunny");
+console.log(bunny);
 
 /* START AUDIO */
 const audioPlayer = require("web-audio-player");
@@ -23,6 +25,7 @@ const audio = audioPlayer(src, {
   volume: 0.5,
 });
 // const loader = document.querySelector('.loader')
+let audio_loaded = false;
 audio.once("load", () => {
   // analyser = glAudioAnalyser(gl, audio.node, audioContext)
   analyser = audioContext.createAnalyser();
@@ -35,6 +38,10 @@ audio.once("load", () => {
     type: "uint8",
     usage: "dynamic",
   });
+  console.log("size:", fftSize);
+  console.log("buff", fftBuffer);
+  console.log("freq", frequencies);
+  audio_loaded = true;
 });
 
 window.addEventListener("click", toggle_audio);
@@ -45,12 +52,13 @@ function toggle_audio() {
   else audio.play();
   playing = !playing;
 }
+
 /* END AUDIO */
 
 // configure intial camera view.
 // camera.view(mat4.lookAt([], [300, 300.0, 300.0], [0, 0, 0.0], [0, 0, 0]));
 camera.zoom(-10.0);
-camera.rotate([0, 0], [0, 0.5]);
+camera.rotate([0, 0], [0, 0.55]);
 const uv = [];
 const elements = [];
 var position = [];
@@ -154,6 +162,12 @@ for (row = 0; row <= N; ++row) {
   }
 }
 
+/* setup wireframe ? */
+const mesh = require("glsl-solid-wireframe")({
+  cells: position,
+  positions: constraints,
+});
+
 const drawCloth = regl({
   // no culling, because we'll be rendering both the backside and the frontside of the cloth.
   //   cull: {
@@ -163,7 +177,16 @@ const drawCloth = regl({
     view: () => camera.view(),
   },
 
-  frag: glslify("./frag.glsl"),
+  //   frag: glslify("./frag.glsl"),
+  frag: glslify`
+    #extension GL_OES_standard_derivatives : enable
+    precision mediump float;
+    #pragma glslify: grid = require(glsl-solid-wireframe/barycentric/scaled)
+    varying vec2 b;
+    void main () {
+      gl_FragColor = vec4(vec3(grid(b, 1.0)), 1);
+    }
+  `,
   vert: glslify("./vert.glsl"),
 
   uniforms: {
@@ -184,21 +207,36 @@ const drawCloth = regl({
   },
 
   attributes: {
-    position: {
-      buffer: positionBuffer,
-      normalized: true,
-    },
-    uv: regl.prop("uv"),
-    normal: {
-      buffer: normalBuffer,
-      normalized: true,
-    },
+    position: mesh.positions,
+    barycentric: mesh.barycentric,
   },
+  elements: mesh.cells,
+
+  //   attributes: {
+  //     index: Array(fftSize)
+  //       .fill()
+  //       .map((_, i) => i),
+  //     frequency: {
+  //       buffer: regl.prop("fftBuffer"),
+  //       normalized: true,
+  //     },
+  //     FFT_SIZE: regl.prop("fftSize"),
+  //     position: {
+  //       buffer: positionBuffer,
+  //       normalized: true,
+  //     },
+  //     uv: regl.prop("uv"),
+  //     normal: {
+  //       buffer: normalBuffer,
+  //       normalized: true,
+  //     },
+
+  //   },
   elements: regl.prop("elements"),
 });
 
 regl.frame(({ tick }) => {
-  const deltaTime = 0.017;
+  //   const deltaTime = 0.017;
 
   regl.clear({
     color: [0, 0, 0, 255],
@@ -208,6 +246,11 @@ regl.frame(({ tick }) => {
   positionBuffer.subdata(position);
   normalBuffer.subdata(normal);
 
-  drawCloth({ elements, uv });
+  if (audio_loaded) {
+    analyser.getByteFrequencyData(frequencies);
+    fftBuffer.subdata(frequencies);
+    drawCloth({ elements, uv, fftBuffer, fftSize });
+  }
+
   camera.tick();
 });

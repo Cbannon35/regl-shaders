@@ -30,9 +30,8 @@
     "gl-vec3": "^1.1.3",
     "glslify": "^7.1.1",
     "regl": "^2.1.0",
-    "web-audio-player": "^1.3.3"
-  },
-  "dependencies": {
+    "web-audio-player": "^1.3.3",
+    "glsl-solid-wireframe": "^1.0.1",
     "resl": "^1.0.3"
   }
 }
