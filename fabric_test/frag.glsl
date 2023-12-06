@@ -2,23 +2,20 @@ precision mediump float;
 
 varying vec2 vUv;
 varying vec3 vNormal;
+varying float z;
 
 uniform sampler2D texture;
+uniform vec2 u_resolution;
+uniform float u_time;
 
 void main () {
-// // vec3 tex = texture2D(texture, vUv*1.0).xyz;
-// vec3 lightDir = normalize(vec3(0.4, 0.9, 0.3));
+    vec2 st = vUv * 2. -1.;
 
-// vec3 n = vNormal;
+    float d = length(st);
+    d = sin(d*8. + u_time) / 8.;
+    d = abs(d);
+    d = step(.1, d);
 
-// // for the back faces we need to use the opposite normals.
-// if(gl_FrontFacing == false) {
-//   n = -n;
-// }
-
-// vec3 ambient = 0.3;
-// vec3 diffuse = 0.7 * clamp( dot(n, lightDir ), 0.0, 1.0 );
-
-// gl_FragColor = vec4(ambient + diffuse, 1.0);
-gl_FragColor = vec4(1.0, 0.0, 1.0, 0.0);
+    // gl_FragColor = vec4(d,d, 0.0, 1.);
+    gl_FragColor = vec4(1.0);
 }

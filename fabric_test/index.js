@@ -1,14 +1,4 @@
-/*
-  tags: physics, advanced
-
-<p>In this example, we use the mass-spring model described by Thomas Jakobsen to implement
-a simple cloth simulation. It is also demonstrated how we can manage a dynamic mesh in regl. <p>
-
-<p> You can read more about cloth simulation <a href="http://graphics.cs.cmu.edu/nsp/course/15-869/2006/papers/jakobsen.htm">here</a> and
-<a href="http://gamedevelopment.tutsplus.com/tutorials/simulate-fabric-and-ragdolls-with-simple-verlet-integration--gamedev-519">here</a>
-
-</p>
- */
+/* Citation: https://github.com/regl-project/regl/blob/gh-pages/example/cloth.js */
 
 const canvas = document.body.appendChild(document.createElement("canvas"));
 const glslify = require("glslify");
@@ -20,8 +10,8 @@ window.addEventListener("resize", fit(canvas), false);
 const vec3 = require("gl-vec3");
 
 // configure intial camera view.
-camera.view(mat4.lookAt([], [0, 3.0, 30.0], [0, 0, -5.5], [0, 1, 0]));
-camera.rotate([0.0, 0.0], [3.14 * 0.15, 0.0]);
+// camera.view(mat4.lookAt([], [0, 3.0, 30.0], [0, 0, 500.5], [1, 1, 0]));
+// camera.rotate([0.0, 0.0], [3.14 * 0.15, 0.0]);
 
 const uv = [];
 const elements = [];
@@ -145,10 +135,14 @@ const drawCloth = regl({
         [],
         Math.PI / 4,
         viewportWidth / viewportHeight,
-        0.01,
+        0.02,
         1000
       ),
-    // texture: regl.prop("clothTexture"),
+    u_time: regl.context("time"),
+    u_resolution: () => [
+      regl.context(context.viewportWidth),
+      regl.context(context.viewportHeight),
+    ],
   },
 
   attributes: {
@@ -165,10 +159,6 @@ const drawCloth = regl({
   elements: regl.prop("elements"),
 });
 
-// regl.frame((context) => {
-//   drawCloth({ elements, uv });
-// });
-
 regl.frame(({ tick }) => {
   const deltaTime = 0.017;
 
@@ -177,117 +167,6 @@ regl.frame(({ tick }) => {
     depth: 1,
   });
 
-  //
-  // Below we do the cloth simulation.
-  //
-
-  var vel = [];
-  var next = [];
-  var delta = deltaTime;
-
-  const g = [0.0, -4.0, 0.0]; // gravity force vector.
-
-  var windForce = [
-    Math.sin(tick / 2.0),
-    Math.cos(tick / 3.0),
-    Math.sin(tick / 1.0),
-  ];
-  vec3.normalize(windForce, windForce);
-  vec3.scale(windForce, windForce, 20.6);
-
-  for (i = 0; i < position.length; ++i) {
-    //
-    // we do verlet integration for every vertex.
-    //
-
-    // compute velocity.
-    vec3.subtract(vel, position[i], oldPosition[i]);
-    vel = [vel[0], vel[1], vel[2]];
-    next = [position[i][0], position[i][1], position[i][2]];
-
-    // advance vertex with velocity.
-    vec3.add(next, next, vel);
-
-    // apply gravity force.
-    vec3.scaleAndAdd(next, next, g, delta * delta);
-
-    // apply wind force.
-    vec3.scaleAndAdd(next, next, windForce, delta * delta);
-
-    // keep track of current and old position.
-    oldPosition[i] = [position[i][0], position[i][1], position[i][2]];
-    position[i] = [next[0], next[1], next[2]];
-  }
-
-  var d = [];
-  var v0, v1;
-  //
-  // Attempt to satisfy the constraints by running a couple of iterations.
-  //
-  for (i = 0; i < 15; ++i) {
-    for (var j = 0; j < constraints.length; j++) {
-      var c = constraints[j];
-
-      v0 = position[c.i0];
-      v1 = position[c.i1];
-
-      vec3.subtract(d, v1, v0);
-
-      var dLength = vec3.length(d);
-      var diff = (dLength - c.restLength) / dLength;
-
-      // repulse/attract the end vertices of the constraint.
-      vec3.scaleAndAdd(v0, v0, d, +0.5 * diff);
-      vec3.scaleAndAdd(v1, v1, d, -0.5 * diff);
-    }
-  }
-
-  // we make some vertices at the edge of the cloth unmovable.
-  for (i = 0; i <= N; ++i) {
-    position[i] = [oldPosition[i][0], oldPosition[i][1], oldPosition[i][2]];
-  }
-
-  // next, we recompute the normals
-  for (i = 0; i < normal.length; i++) {
-    normal[i] = [0.0, 0.0, 0.0];
-  }
-
-  //
-  for (i = 0; i < elements.length; i++) {
-    i0 = elements[i][0];
-    i1 = elements[i][1];
-    i2 = elements[i][2];
-
-    var p0 = position[i0];
-    var p1 = position[i1];
-    var p2 = position[i2];
-
-    v0 = [0.0, 0.0, 0.0];
-    vec3.subtract(v0, p0, p1);
-
-    v1 = [0.0, 0.0, 0.0];
-    vec3.subtract(v1, p0, p2);
-
-    // compute face normal.
-    var n0 = [0.0, 0.0, 0.0];
-    vec3.cross(n0, v0, v1);
-    vec3.normalize(n0, n0);
-
-    // add face normal to vertices of face.
-    vec3.add(normal[i0], normal[i0], n0);
-    vec3.add(normal[i1], normal[i1], n0);
-    vec3.add(normal[i2], normal[i2], n0);
-  }
-
-  // the average of the total face normals approximates the vertex normals.
-  for (var i = 0; i < normal.length; i++) {
-    vec3.normalize(normal[i], normal[i]);
-  }
-
-  /*
-        Make sure that we stream the positions and normals to their buffers,
-        since these are updated every frame.
-        */
   positionBuffer.subdata(position);
   normalBuffer.subdata(normal);
 
