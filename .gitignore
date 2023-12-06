@@ -3,4 +3,6 @@ node_modules/
 *.pem
 *.crt
 *.key
+audio/
+audio-silky/
 ```
