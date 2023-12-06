@@ -9,10 +9,48 @@ const camera = require("canvas-orbit-camera")(canvas);
 window.addEventListener("resize", fit(canvas), false);
 const vec3 = require("gl-vec3");
 
-// configure intial camera view.
-// camera.view(mat4.lookAt([], [0, 3.0, 30.0], [0, 0, 500.5], [1, 1, 0]));
-// camera.rotate([0.0, 0.0], [3.14 * 0.15, 0.0]);
+/* START AUDIO */
+const audioPlayer = require("web-audio-player");
+const src = "../assets/sage_room_hylics.mp3";
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let analyser, fftSize, fftBuffer, frequencies;
 
+const audioContext = new AudioContext();
+const audio = audioPlayer(src, {
+  context: audioContext,
+  loop: true,
+  buffer: false,
+  volume: 0.5,
+});
+// const loader = document.querySelector('.loader')
+audio.once("load", () => {
+  // analyser = glAudioAnalyser(gl, audio.node, audioContext)
+  analyser = audioContext.createAnalyser();
+  audio.node.connect(analyser);
+  audio.node.connect(audioContext.destination);
+  fftSize = analyser.frequencyBinCount;
+  frequencies = new Uint8Array(fftSize);
+  fftBuffer = regl.buffer({
+    length: fftSize,
+    type: "uint8",
+    usage: "dynamic",
+  });
+});
+
+window.addEventListener("click", toggle_audio);
+
+let playing = false;
+function toggle_audio() {
+  if (playing) audio.pause();
+  else audio.play();
+  playing = !playing;
+}
+/* END AUDIO */
+
+// configure intial camera view.
+// camera.view(mat4.lookAt([], [300, 300.0, 300.0], [0, 0, 0.0], [0, 0, 0]));
+camera.zoom(-10.0);
+camera.rotate([0, 0], [0, 0.5]);
 const uv = [];
 const elements = [];
 var position = [];
@@ -35,7 +73,7 @@ var ymin = -size;
 var ymax = +size;
 
 // the tesselation level of the cloth.
-const N = 20;
+const N = 30;
 
 var row;
 var col;
